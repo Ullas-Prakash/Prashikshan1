@@ -256,23 +256,20 @@ function LearningPlayer({ course, enrollment, onClose, onProgressUpdate }) {
             flexWrap:'wrap', gap:10,
           }}>
             <div>
-              <strong style={{ fontSize:14 }}>🎓 Course Completed — Certificate Issued!</strong>
+              <strong style={{ fontSize:14 }}>🎓 Course Completed!</strong>
               <p style={{ margin:'2px 0 0', fontSize:11, color:'#c5ded0' }}>
-                Certificate ID: <code style={{ background:'rgba(255,255,255,.15)', padding:'1px 6px',
-                                               borderRadius:4 }}>{certResult.certificateId}</code>
-                {' '}· +{certResult.creditAwarded} NEP credits awarded.
+                +{certResult.creditAwarded} NEP credits awarded.{' '}
+                Take the course quiz to earn your certificate.
               </p>
             </div>
             <div style={{ display:'flex', gap:8 }}>
-              {certResult.pdfUrl && (
-                <a href={certResult.pdfUrl} target="_blank" rel="noopener noreferrer"
-                   className="button button-light" style={{ fontSize:11 }}>
-                  ↓ Download Certificate
-                </a>
-              )}
-              <Link to={`/verify/${certResult.certificateId}`} target="_blank"
-                    className="button button-light" style={{ fontSize:11 }}>
-                🔍 Verify
+              <Link
+                to={`/courses/${course._id}/quiz`}
+                onClick={(e) => { e.stopPropagation(); stopPolling(); }}
+                className="button button-light"
+                style={{ fontSize:11, textDecoration:'none' }}
+              >
+                📝 Take Course Quiz →
               </Link>
             </div>
           </div>
@@ -625,7 +622,7 @@ export default function Courses() {
                       display:'flex', justifyContent:'space-between',
                       fontSize:9, fontWeight:700, color:'#3a5443', marginBottom:4,
                     }}>
-                      <span>{isCompleted ? '✓ Completed' : 'In progress'}</span>
+                      <span>{isCompleted ? (course.code === 'DEMO-101' ? '✓ Completed (Demo)' : '✓ Completed') : 'In progress'}</span>
                       <span>{progress}%</span>
                     </div>
                     <div className="progress" style={{ height:5 }}>
@@ -642,12 +639,12 @@ export default function Courses() {
                   <span style={{
                     padding:'2px 6px', background:'#e9f2e5',
                     borderRadius:4, fontWeight:700,
-                  }}>▶ 7 video modules</span>
+                  }}>{course.code === 'DEMO-101' ? '⚡ Demo course' : '▶ 7 video modules'}</span>
                   {isCompleted && !certId && (
                     <span style={{
-                      padding:'2px 6px', background:'#e1f1df',
-                      borderRadius:4, fontWeight:700, color:'#1f663c',
-                    }}>🎓 Certified</span>
+                      padding:'2px 6px', background:'#fff0cd',
+                      borderRadius:4, fontWeight:700, color:'#946914',
+                    }}>📝 Quiz pending</span>
                   )}
                   {certId && (
                     <Link
@@ -659,7 +656,7 @@ export default function Courses() {
                         borderRadius:4, fontWeight:700, color:'#1f663c',
                         fontSize:10, textDecoration:'none',
                       }}>
-                      🔍 Verify Certificate
+                      🎓 Certificate
                     </Link>
                   )}
                 </div>
@@ -671,11 +668,22 @@ export default function Courses() {
                   </div>
                   {user?.role === 'student' ? (
                     isEnrolled ? (
-                      <button
-                        className="button button-small"
-                        onClick={(e) => { e.stopPropagation(); openPlayer(course); }}>
-                        {isCompleted ? '▶ Review' : '▶ Continue'}
-                      </button>
+                      <div style={{ display:'flex', gap:6 }}>
+                        <button
+                          className="button button-small"
+                          onClick={(e) => { e.stopPropagation(); openPlayer(course); }}>
+                          {isCompleted ? '▶ Review' : '▶ Continue'}
+                        </button>
+                        {isCompleted && !certId && (
+                          <Link
+                            to={`/courses/${course._id}/quiz`}
+                            onClick={(e) => e.stopPropagation()}
+                            className="button button-small"
+                            style={{ textDecoration:'none' }}>
+                            📝 Take Quiz
+                          </Link>
+                        )}
+                      </div>
                     ) : (
                       <button
                         className="button button-small button-outline"

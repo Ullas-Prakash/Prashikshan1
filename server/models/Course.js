@@ -28,6 +28,9 @@ const courseSchema = new mongoose.Schema({
   modules:  { type: [String], default: [] },          // legacy text list kept for compat
   videos:   { type: [videoSchema], default: [] },     // NEW: structured video library
   published:{ type: Boolean, default: true },
+  // Per-course quiz passing score override.  When null, the global
+  // QUIZ_MIN_PASSING_SCORE from config/quizConfig.js is used.
+  quizPassingScore: { type: Number, default: null },
 }, { timestamps: true });
 
 module.exports = mongoose.model('Course', courseSchema);

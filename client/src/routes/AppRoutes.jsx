@@ -6,6 +6,7 @@ import Register from '../pages/Register';
 import Dashboard from '../pages/Dashboard';
 import Assessment from '../pages/Assessment';
 import Courses from '../pages/Courses';
+import CourseQuiz from '../pages/CourseQuiz';
 import Internships from '../pages/Internships';
 import PartnerDashboard from '../pages/PartnerDashboard';
 import CoordinatorDashboard from '../pages/CoordinatorDashboard';
@@ -23,6 +24,7 @@ export default function AppRoutes() {
     <Route path="/coordinator-setup" element={<PublicRoute><CoordinatorSetup /></PublicRoute>} />
     <Route path="/partner-setup" element={<PartnerSetupGuard><PartnerProfileSetup /></PartnerSetupGuard>} />
     <Route path="/courses" element={<AssessmentGuard><Courses /></AssessmentGuard>} />
+    <Route path="/courses/:courseId/quiz" element={<ProtectedRoute roles={['student']}><CourseQuiz /></ProtectedRoute>} />
     <Route path="/internships" element={<AssessmentGuard><Internships /></AssessmentGuard>} />
     <Route path="/dashboard" element={<ProtectedRoute roles={['student']}><Dashboard /></ProtectedRoute>} />
     <Route path="/assessment" element={<ProtectedRoute roles={['student']}><Assessment /></ProtectedRoute>} />

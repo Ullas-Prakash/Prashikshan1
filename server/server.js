@@ -8,6 +8,7 @@ const { seedIfEnabled } = require('./services/seedData');
 const authRoutes        = require('./routes/authRoutes');
 const assessmentRoutes  = require('./routes/assessmentRoutes');
 const courseRoutes      = require('./routes/courseRoutes');
+const courseQuizRoutes   = require('./routes/courseQuizRoutes');
 const internshipRoutes  = require('./routes/internshipRoutes');
 const coordinatorRoutes = require('./routes/coordinatorRoutes');
 const certificateRoutes = require('./routes/certificateRoutes');
@@ -41,6 +42,7 @@ app.get('/api/health', (_req, res) => res.json({ status: 'ok', service: 'prashik
 app.use('/api/auth', authRoutes.router);
 app.use('/api/assessments', assessmentRoutes);
 app.use('/api/courses', courseRoutes);
+app.use('/api/courses', courseQuizRoutes); // quiz routes share the /api/courses prefix
 app.use('/api/internships', internshipRoutes);
 app.use('/api/coordination', coordinatorRoutes);
 app.use('/api/certificates', certificateRoutes);

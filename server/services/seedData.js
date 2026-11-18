@@ -48,8 +48,17 @@ const NEW_COURSES = [
   { code:'COMM-280',  title:'Communication & Interview Skills',             summary:'Ace technical interviews — STAR method, system design walkthroughs, resume crafting, and LinkedIn optimisation.',  skills:['dsa','javascript'],                   level:'beginner',     hours:24,  credits:2, modules:['Interview Prep','Self Introduction','Behavioural Questions','Technical Q&A','Resume Building','LinkedIn Profile','System Design Interviews'] },
 ];
 
+// ─── Demo course for quiz/certificate workflow demonstration ──────────────────
+const DEMO_COURSE = {
+  code: 'DEMO-101', title: 'Introduction to Web Development (Demo)',
+  summary: 'A quick demo course covering HTML, CSS, JavaScript, HTTP, and responsive design fundamentals. Complete this course to try the quiz and earn your certificate.',
+  skills: ['html', 'css', 'javascript'], level: 'beginner', hours: 1, credits: 1,
+  modules: ['HTML Basics', 'CSS Fundamentals', 'JavaScript Essentials', 'HTTP & Web', 'Responsive Design'],
+  quizPassingScore: 15, // strictly above 14 → 15+ required to pass
+};
+
 // Attach videos from the curated library to every course
-const ALL_COURSES = [...ORIGINAL_COURSES, ...NEW_COURSES].map(c => ({
+const ALL_COURSES = [...ORIGINAL_COURSES, ...NEW_COURSES, DEMO_COURSE].map(c => ({
   ...c,
   videos: vids(c.code),
 }));
@@ -81,14 +90,19 @@ async function seedIfEnabled() {
     console.log(`[Seed] Inserted ${ALL_COURSES.length} courses.`);
   } else {
     // Migration: patch existing courses with updated skill tags and video data
-    // so new skills (java, cloud, os, dbms) map correctly to courses.
     for (const courseDef of ALL_COURSES) {
       await Course.updateOne(
         { code: courseDef.code },
-        { $set: { skills: courseDef.skills, videos: courseDef.videos } }
+        { $set: { skills: courseDef.skills, videos: courseDef.videos, ...(courseDef.quizPassingScore != null ? { quizPassingScore: courseDef.quizPassingScore } : {}) } }
       );
     }
-    console.log(`[Seed] Patched skills & videos for ${ALL_COURSES.length} courses.`);
+    // Insert DEMO-101 if it doesn't exist yet (safe for existing deployments)
+    const demoExists = await Course.exists({ code: DEMO_COURSE.code });
+    if (!demoExists) {
+      await Course.create({ ...DEMO_COURSE, videos: vids(DEMO_COURSE.code) });
+      console.log(`[Seed] Inserted demo course ${DEMO_COURSE.code}.`);
+    }
+    console.log(`[Seed] Patched skills, videos & quiz config for ${ALL_COURSES.length} courses.`);
   }
 
   if (await Internship.countDocuments() === 0) {

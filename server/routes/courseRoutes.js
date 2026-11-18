@@ -7,7 +7,6 @@ const User       = require('../models/User');
 const { requireAuth, allowRoles } = require('../lib/auth');
 const requireAssessment = require('../middleware/requireAssessment');
 const { getCourseVideos } = require('../services/youtubeService');
-const { issueCertificate } = require('../services/certificateService');
 
 const router    = express.Router();
 const normalize = (v) => String(v || '').trim().toLowerCase();
@@ -301,7 +300,6 @@ router.post('/enrollments/:id/track-video', requireAuth, allowRoles('student'), 
 
     const allDone = watchedCount >= totalVideos && totalVideos > 0;
 
-    let certificate  = null;
     let creditAwarded = 0;
 
     if (allDone && enrollment.status !== 'completed') {
@@ -325,27 +323,12 @@ router.post('/enrollments/:id/track-video', requireAuth, allowRoles('student'), 
         enrollment.creditAwarded = true;
       }
 
-      await enrollment.save();   // save before cert so certificateId can be set
+      await enrollment.save();   // save completion state
 
-      // ── Generate certificate ─────────────────────────────────────────
-      try {
-        const user    = await User.findById(req.auth.sub).select('name');
-        const baseUrl = `${req.protocol}://${req.get('host')}`;
-        certificate = await issueCertificate({
-          studentName:   user.name,
-          courseName:    course.title,
-          courseCode:    course.code,
-          credits:       course.credits,
-          studentId:     req.auth.sub,
-          courseId:      course._id,
-          enrollmentDoc: enrollment,
-          baseUrl,
-        });
-      } catch (certErr) {
-        // Certificate generation failure must NOT roll back the completion —
-        // log it and continue; the student can regenerate later.
-        console.error('[Certificate] Generation error (non-fatal):', certErr.message);
-      }
+      // ── Certificate is NOT auto-issued here ──────────────────────────────
+      // Per the Course Completion Quiz feature: a certificate is only issued
+      // after the student passes the course-specific quiz.  The student
+      // completes the quiz from the Courses page after all videos are watched.
     } else {
       await enrollment.save();
     }
@@ -356,8 +339,8 @@ router.post('/enrollments/:id/track-video', requireAuth, allowRoles('student'), 
       progress: enrollment.progress,
       completed: allDone,
       creditAwarded,
-      certificateId:  certificate?.certificateId || enrollment.certificateId || null,
-      pdfUrl:         certificate?.pdfUrl || null,
+      certificateId:  enrollment.certificateId || null,  // from quiz, if already passed
+      pdfUrl:         null,
     });
   } catch (e) { next(e); }
 });

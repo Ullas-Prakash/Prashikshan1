@@ -225,6 +225,9 @@ export default function Dashboard() {
   // Certificate modal
   const [certEnrollment, setCertEnrollment]   = useState(null); // enrollment object to certify
 
+  // Quiz certificates for "My Certificates" section
+  const [quizCerts, setQuizCerts] = useState([]);
+
   const [loading, setLoading]   = useState(true);
   const [error, setError]       = useState('');
   const [notice, setNotice]     = useState('');
@@ -234,7 +237,7 @@ export default function Dashboard() {
     try {
       const [
         courseData, enrollmentData, applicationData, internshipData,
-        analyticsData, revisionData, assessmentCourseData,
+        analyticsData, revisionData, assessmentCourseData, quizCertData,
       ] = await Promise.all([
         api('/courses/recommended'),
         api('/courses/me/enrollments'),
@@ -246,6 +249,7 @@ export default function Dashboard() {
         })),
         api('/assessments/daily-revision').catch(() => null),
         api('/courses/assessment-recommendations').catch(() => ({ courses: [] })),
+        api('/courses/me/quiz-certificates').catch(() => ({ certificates: [] })),
       ]);
 
       setData({
@@ -258,6 +262,7 @@ export default function Dashboard() {
 
       if (analyticsData) setAnalytics(analyticsData);
       if (revisionData)  setDailyRevision(revisionData);
+      setQuizCerts(quizCertData.certificates || []);
     } catch (e) {
       setError(e.message);
     } finally {
@@ -703,6 +708,71 @@ export default function Dashboard() {
 
         {/* SIDEBAR */}
         <aside className="workspace-side">
+
+          {/* ACADEMIC PROFILE CARD — students only, shown when academic data exists */}
+          {user.role === 'student' && (user.collegeName || user.degree || user.branch) && (
+            <section className="panel">
+              <p className="eyebrow">Academic profile</p>
+              <h2>Your details</h2>
+              <div style={{ display: 'grid', gap: 11, marginTop: 14 }}>
+                {user.collegeName && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                    <span style={{ fontSize: 9, fontWeight: 800, color: '#718076', textTransform: 'uppercase', letterSpacing: '0.08em' }}>College / University</span>
+                    <span style={{ fontSize: 12, color: '#243c2c', fontWeight: 600 }}>{user.collegeName}</span>
+                  </div>
+                )}
+                {(user.degree || user.branch) && (
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                    {user.degree && (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                        <span style={{ fontSize: 9, fontWeight: 800, color: '#718076', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Degree</span>
+                        <span style={{ fontSize: 12, color: '#243c2c', fontWeight: 600 }}>{user.degree}</span>
+                      </div>
+                    )}
+                    {user.branch && (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                        <span style={{ fontSize: 9, fontWeight: 800, color: '#718076', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Branch</span>
+                        <span style={{ fontSize: 12, color: '#243c2c', fontWeight: 600 }}>{user.branch}</span>
+                      </div>
+                    )}
+                  </div>
+                )}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
+                  {user.yearOfStudy != null && (
+                    <div style={{ padding: '10px 12px', borderRadius: 6, background: '#f4f8f0', border: '1px solid #dde5d8', textAlign: 'center' }}>
+                      <span style={{ display: 'block', fontSize: 18, fontWeight: 800, color: '#254a36', fontFamily: "'Playfair Display', serif" }}>{user.yearOfStudy}</span>
+                      <small style={{ fontSize: 9, color: '#718076', fontWeight: 700, textTransform: 'uppercase' }}>Year</small>
+                    </div>
+                  )}
+                  {user.cgpa != null && (
+                    <div style={{ padding: '10px 12px', borderRadius: 6, background: '#f4f8f0', border: '1px solid #dde5d8', textAlign: 'center' }}>
+                      <span style={{ display: 'block', fontSize: 18, fontWeight: 800, color: '#254a36', fontFamily: "'Playfair Display', serif" }}>{user.cgpa}</span>
+                      <small style={{ fontSize: 9, color: '#718076', fontWeight: 700, textTransform: 'uppercase' }}>CGPA</small>
+                    </div>
+                  )}
+                  {user.graduationYear != null && (
+                    <div style={{ padding: '10px 12px', borderRadius: 6, background: '#f4f8f0', border: '1px solid #dde5d8', textAlign: 'center' }}>
+                      <span style={{ display: 'block', fontSize: 18, fontWeight: 800, color: '#254a36', fontFamily: "'Playfair Display', serif" }}>{user.graduationYear}</span>
+                      <small style={{ fontSize: 9, color: '#718076', fontWeight: 700, textTransform: 'uppercase' }}>Grad.</small>
+                    </div>
+                  )}
+                </div>
+                {user.collegeEmail && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                    <span style={{ fontSize: 9, fontWeight: 800, color: '#718076', textTransform: 'uppercase', letterSpacing: '0.08em' }}>College email</span>
+                    <span style={{ fontSize: 11, color: '#387352', fontWeight: 600, wordBreak: 'break-all' }}>{user.collegeEmail}</span>
+                  </div>
+                )}
+                {user.studentContact && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                    <span style={{ fontSize: 9, fontWeight: 800, color: '#718076', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Contact</span>
+                    <span style={{ fontSize: 12, color: '#243c2c', fontWeight: 600 }}>{user.studentContact}</span>
+                  </div>
+                )}
+              </div>
+            </section>
+          )}
+
           <section className="panel">
             <p className="eyebrow">My skill profile</p>
             <h2>Where you are today</h2>
@@ -726,6 +796,62 @@ export default function Dashboard() {
               {user.skillProfile?.length ? 'Reassess skills' : 'Start assessment'}
             </Link>
           </section>
+
+          {/* MY CERTIFICATES — quiz-based course completion certificates */}
+          {quizCerts.length > 0 && (
+            <section className="panel">
+              <p className="eyebrow">My Certificates</p>
+              <h2>Completed with quiz</h2>
+              <div style={{ display: 'grid', gap: 14, marginTop: 16 }}>
+                {quizCerts.map((cert) => (
+                  <div key={cert.certificateId} style={{
+                    padding: '14px', borderRadius: 7,
+                    border: '1px solid #d7e2cf', background: '#fcfdf7',
+                  }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', gap: 8 }}>
+                      <div style={{ minWidth: 0 }}>
+                        <h3 style={{ margin: '0 0 4px', fontSize: 13, color: '#243c2c', letterSpacing: '-0.02em' }}>
+                          {cert.courseTitle}
+                        </h3>
+                        <p style={{ margin: 0, fontSize: 10, color: '#7b887e' }}>
+                          {cert.courseCode} · {cert.credits} credits
+                        </p>
+                      </div>
+                      {cert.quizScore != null && (
+                        <span style={{
+                          padding: '3px 8px', borderRadius: 12, fontSize: 10, fontWeight: 800,
+                          background: '#e1f1df', color: '#287048', flexShrink: 0,
+                        }}>
+                          {cert.quizScore}/{cert.quizTotalQuestions} · {cert.quizPercentage}%
+                        </span>
+                      )}
+                    </div>
+                    <div style={{ display: 'flex', gap: 6, marginTop: 12, flexWrap: 'wrap' }}>
+                      {cert.pdfUrl && (
+                        <a
+                          href={`/api/certificates/pdf/${cert.certificateId}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="button button-small"
+                          style={{ textDecoration: 'none', fontSize: 10 }}
+                        >
+                          ↓ Download
+                        </a>
+                      )}
+                      <Link
+                        to={`/verify/${cert.certificateId}`}
+                        target="_blank"
+                        className="button button-small button-outline"
+                        style={{ textDecoration: 'none', fontSize: 10 }}
+                      >
+                        🔍 Verify
+                      </Link>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </section>
+          )}
 
           <section className="panel opportunity-panel">
             <p className="eyebrow">Matched opportunities</p>

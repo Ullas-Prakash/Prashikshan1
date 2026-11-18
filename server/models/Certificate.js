@@ -19,6 +19,12 @@ const certificateSchema = new mongoose.Schema({
   // Relative path under /api/certificates/pdf/:certificateId once generated.
   // Stored as an empty string until the PDF generation completes.
   pdfUrl:    { type: String, default: '' },
+  // ── Quiz-based certificate fields (optional — only for quiz certificates) ──
+  quizScore:          { type: Number, default: null },
+  quizTotalQuestions: { type: Number, default: null },
+  quizPercentage:     { type: Number, default: null },
+  courseCompletedAt:  { type: Date,   default: null },
+  quizPassedAt:       { type: Date,   default: null },
 }, { timestamps: true });
 
 module.exports = mongoose.model('Certificate', certificateSchema);

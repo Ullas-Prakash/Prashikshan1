@@ -244,4 +244,162 @@ async function issueCertificate({ studentName, courseName, courseCode, credits,
   return cert;
 }
 
-module.exports = { issueCertificate, CERT_DIR };
+// ─────────────────────────────────────────────────────────────────────────────
+// Quiz-based certificate generation
+// ─────────────────────────────────────────────────────────────────────────────
+/**
+ * Generates a PDF certificate that includes the quiz score.
+ * Used ONLY after a student passes the course completion quiz.
+ *
+ * @param {object} opts
+ *   studentName      {string}
+ *   courseName       {string}
+ *   courseCode       {string}
+ *   credits          {number}
+ *   studentId        {ObjectId|string}
+ *   courseId         {ObjectId|string}
+ *   enrollmentDoc    {Enrollment} — mutated to set certificateId
+ *   baseUrl          {string}
+ *   quizScore        {number}   — e.g. 17
+ *   quizTotalQuestions {number} — e.g. 20
+ *   quizPercentage   {number}   — e.g. 85
+ *   courseCompletedAt {Date}    — when enrollment was marked completed
+ *   quizPassedAt      {Date}    — when the quiz was passed
+ * @returns {Promise<Certificate>}
+ */
+async function issueQuizCertificate({
+  studentName, courseName, courseCode, credits,
+  studentId, courseId, enrollmentDoc, baseUrl,
+  quizScore, quizTotalQuestions, quizPercentage,
+  courseCompletedAt, quizPassedAt,
+}) {
+  ensureCertDir();
+
+  const certId      = await newUniqueCertId();
+  const issuedAt    = new Date();
+  const verifyUrl   = `${baseUrl}/verify/${certId}`;
+  const pdfFilename = `${certId}.pdf`;
+  const pdfPath     = path.join(CERT_DIR, pdfFilename);
+  const pdfUrl      = `/api/certificates/pdf/${certId}`;
+
+  const qrBuffer = await QRCode.toBuffer(verifyUrl, {
+    errorCorrectionLevel: 'M', type: 'png', width: 160, margin: 1,
+    color: { dark: C.emerald, light: C.white },
+  });
+
+  await new Promise((resolve, reject) => {
+    const doc = new PDFDoc({
+      size: 'A4', layout: 'landscape', margin: 0,
+      info: {
+        Title:   `Prashikshan Certificate — ${courseName}`,
+        Author:  'Prashikshan Platform',
+        Subject: 'Course Completion Certificate',
+      },
+    });
+
+    const stream = fs.createWriteStream(pdfPath);
+    doc.pipe(stream);
+    stream.on('finish', resolve);
+    stream.on('error', reject);
+
+    const W = 841, H = 595;
+
+    doc.rect(0, 0, W, H).fill(C.offWhite);
+    doc.rect(0, 0, W, 90).fill(C.emerald);
+    doc.rect(0, 90, W, 5).fill(C.gold);
+    rgbStroke(doc, C.mintDeep);
+    doc.rect(28, 28, W - 56, H - 56).lineWidth(1.5).stroke();
+    doc.rect(32, 32, W - 64, H - 64).lineWidth(0.5).stroke();
+
+    doc.font('Helvetica-Bold').fontSize(11).fillColor(C.goldLight)
+       .text('PRASHIKSHAN', 50, 22, { align: 'left' });
+    doc.font('Helvetica').fontSize(8).fillColor(C.mint)
+       .text('NEP-Aligned Career Pathway Platform', 50, 38);
+    doc.font('Helvetica').fontSize(11).fillColor(C.gold)
+       .text('CERTIFICATE OF COMPLETION', 0, 62, { align: 'center' });
+
+    const lineY = 110;
+    rgbStroke(doc, C.mintDeep);
+    doc.moveTo(60, lineY).lineTo(W - 60, lineY).lineWidth(0.8).stroke();
+
+    // ── Certificate text ──
+    doc.font('Helvetica').fontSize(10).fillColor(C.textLight)
+       .text('This certificate is proudly presented to', 0, 128, { align: 'center' });
+
+    doc.font('Helvetica-Bold').fontSize(30).fillColor(C.emerald)
+       .text(studentName, 80, 150, { width: 580, align: 'center' });
+
+    const nameBottom = doc.y + 6;
+    rgbStroke(doc, C.gold);
+    doc.moveTo(200, nameBottom).lineTo(W - 200, nameBottom).lineWidth(1).stroke();
+
+    doc.font('Helvetica').fontSize(10).fillColor(C.textLight)
+       .text('for successfully completing', 0, nameBottom + 12, { align: 'center' });
+
+    doc.font('Helvetica-Bold').fontSize(18).fillColor(C.textDark)
+       .text(courseName, 80, doc.y + 6, { width: 580, align: 'center' });
+
+    doc.font('Helvetica').fontSize(10).fillColor(C.textLight)
+       .text('and demonstrating the required understanding through the Prashikshan course assessment.', 60, doc.y + 8, { width: W - 120, align: 'center' });
+
+    doc.font('Helvetica').fontSize(10).fillColor(C.textMid)
+       .text(`Course Code: ${courseCode}  ·  NEP Credits: ${credits}`, 0, doc.y + 10, { align: 'center' });
+
+    // ── Quiz score badge ──
+    const scoreY = doc.y + 18;
+    doc.roundedRect(W/2 - 160, scoreY - 6, 320, 36, 6).fill(C.mint);
+    doc.font('Helvetica-Bold').fontSize(16).fillColor(C.emerald)
+       .text(`Assessment Score: ${quizScore}/${quizTotalQuestions}  (${quizPercentage}%)`, W/2 - 160, scoreY + 4, { width: 320, align: 'center' });
+
+    // ── Dates ──
+    const fmtDate = (d) => d ? new Date(d).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' }) : '—';
+    doc.font('Helvetica').fontSize(9).fillColor(C.textLight)
+       .text(`Course Completed: ${fmtDate(courseCompletedAt)}  ·  Assessment Passed: ${fmtDate(quizPassedAt)}`, 0, doc.y + 18, { align: 'center' });
+
+    // ── Certificate ID pill ──
+    const idY = doc.y + 14;
+    doc.roundedRect(W/2 - 120, idY - 4, 240, 20, 4).fill(C.mint);
+    doc.font('Helvetica-Bold').fontSize(9).fillColor(C.emerald)
+       .text(`Certificate ID: ${certId}`, W/2 - 120, idY, { width: 240, align: 'center' });
+
+    // ── Signature line ──
+    const sigY = H - 95;
+    rgbStroke(doc, C.textLight);
+    doc.moveTo(80, sigY).lineTo(240, sigY).lineWidth(0.8).stroke();
+    doc.font('Helvetica-Bold').fontSize(8).fillColor(C.emerald)
+       .text('Prashikshan Platform', 80, sigY + 6, { width: 160, align: 'center' });
+    doc.font('Helvetica').fontSize(7).fillColor(C.textLight)
+       .text('Authorised Signatory', 80, sigY + 18, { width: 160, align: 'center' });
+
+    // ── Footer ──
+    doc.rect(0, H - 46, W, 46).fill(C.emerald);
+    doc.font('Helvetica').fontSize(7).fillColor(C.mint)
+       .text(`Verify this certificate at: ${verifyUrl}`, 0, H - 32, { align: 'center' });
+    doc.font('Helvetica').fontSize(6).fillColor(C.mintDeep)
+       .text('Prashikshan · NEP 2020 Aligned · prashikshan.edu', 0, H - 18, { align: 'center' });
+
+    // ── QR code ──
+    doc.image(qrBuffer, W - 195, H - 198, { width: 110, height: 110 });
+    doc.font('Helvetica').fontSize(7).fillColor(C.textLight)
+       .text('Scan to verify', W - 195, H - 82, { width: 110, align: 'center' });
+
+    doc.end();
+  });
+
+  const cert = await Certificate.create({
+    certificateId: certId,
+    student:       studentId,
+    course:        courseId,
+    issuedAt,
+    status:        'VALID',
+    pdfUrl,
+  });
+
+  enrollmentDoc.certificateId = certId;
+  await enrollmentDoc.save();
+
+  console.log(`[Certificate] Quiz certificate issued ${certId} — ${courseCode} — score ${quizScore}/${quizTotalQuestions}`);
+  return cert;
+}
+
+module.exports = { issueCertificate, CERT_DIR, issueQuizCertificate };

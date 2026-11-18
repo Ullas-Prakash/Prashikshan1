@@ -1,0 +1,102 @@
+[
+  {
+    "question": "What does HTML stand for?",
+    "options": ["HyperText Markup Language", "High Transfer Markup Language", "HyperText Machine Language", "High Text Markup Language"],
+    "answer": "HyperText Markup Language"
+  },
+  {
+    "question": "Which HTML element is used to create a hyperlink?",
+    "options": ["<link>", "<a>", "<href>", "<url>"],
+    "answer": "<a>"
+  },
+  {
+    "question": "What is the purpose of the HTML <head> element?",
+    "options": ["It contains the page's visible content", "It contains metadata, title, and links to external resources", "It defines the main heading of the page", "It creates a header navigation bar"],
+    "answer": "It contains metadata, title, and links to external resources"
+  },
+  {
+    "question": "Which CSS property is used to change the text color of an element?",
+    "options": ["text-color", "font-color", "color", "text-style"],
+    "answer": "color"
+  },
+  {
+    "question": "What does CSS Flexbox primarily help with?",
+    "options": ["Animating elements", "One-dimensional layout and alignment", "Two-dimensional grid layouts", "Styling form inputs"],
+    "answer": "One-dimensional layout and alignment"
+  },
+  {
+    "question": "Which CSS property is used to create space between the border of an element and its content?",
+    "options": ["margin", "spacing", "padding", "gap"],
+    "answer": "padding"
+  },
+  {
+    "question": "What is the default display value for a <div> element?",
+    "options": ["inline", "block", "flex", "inline-block"],
+    "answer": "block"
+  },
+  {
+    "question": "Which CSS unit is relative to the parent element's font size?",
+    "options": ["px", "rem", "em", "vh"],
+    "answer": "em"
+  },
+  {
+    "question": "What does the CSS property 'box-sizing: border-box' do?",
+    "options": ["Removes the border from the element", "Includes padding and border in the element's total width and height", "Adds a border around the element", "Removes padding from the element"],
+    "answer": "Includes padding and border in the element's total width and height"
+  },
+  {
+    "question": "Which JavaScript keyword is used to declare a variable that can be reassigned?",
+    "options": ["const", "let", "final", "static"],
+    "answer": "let"
+  },
+  {
+    "question": "What is the output of: typeof null in JavaScript?",
+    "options": ["null", "undefined", "object", "number"],
+    "answer": "object"
+  },
+  {
+    "question": "Which method is used to add an element to the end of an array in JavaScript?",
+    "options": ["push()", "add()", "append()", "insert()"],
+    "answer": "push()"
+  },
+  {
+    "question": "What does '===' check in JavaScript that '==' does not?",
+    "options": ["It checks value only", "It checks both value and type", "It checks type only", "It checks reference only"],
+    "answer": "It checks both value and type"
+  },
+  {
+    "question": "Which JavaScript method is used to select an element by its ID?",
+    "options": ["document.getElementByClassName()", "document.querySelector('#id')", "document.getElementById()", "Both document.getElementById() and document.querySelector('#id')"],
+    "answer": "Both document.getElementById() and document.querySelector('#id')"
+  },
+  {
+    "question": "What is an async function in JavaScript?",
+    "options": ["A function that runs in a separate thread", "A function that always returns a Promise and allows use of await", "A function that cannot accept parameters", "A function that runs infinitely"],
+    "answer": "A function that always returns a Promise and allows use of await"
+  },
+  {
+    "question": "What does HTTP stand for?",
+    "options": ["HyperText Transfer Protocol", "High Transfer Text Protocol", "HyperText Transmission Process", "Home Transfer Text Protocol"],
+    "answer": "HyperText Transfer Protocol"
+  },
+  {
+    "question": "Which HTTP status code indicates 'Not Found'?",
+    "options": ["200", "301", "404", "500"],
+    "answer": "404"
+  },
+  {
+    "question": "What is the purpose of responsive web design?",
+    "options": ["To make websites load faster", "To make web pages look good on all devices and screen sizes", "To reduce the amount of code needed", "To improve SEO rankings"],
+    "answer": "To make web pages look good on all devices and screen sizes"
+  },
+  {
+    "question": "Which Git command is used to save changes to the local repository?",
+    "options": ["git save", "git push", "git commit", "git update"],
+    "answer": "git commit"
+  },
+  {
+    "question": "What is the purpose of the 'viewport' meta tag in HTML?",
+    "options": ["It sets the page title", "It controls the layout on mobile devices by setting the viewport width", "It defines the page encoding", "It links to external CSS files"],
+    "answer": "It controls the layout on mobile devices by setting the viewport width"
+  }
+]

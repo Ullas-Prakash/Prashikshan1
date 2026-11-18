@@ -38,6 +38,19 @@ const userSchema = new mongoose.Schema({
   contactNumber:  { type: String, trim: true, default: '' },
   companyAddress: { type: String, trim: true, default: '' },
   isProfileComplete: { type: Boolean, default: false },
+  // Student-specific academic + contact fields (all default to '' / null so
+  // existing accounts without these fields continue to work without migration)
+  collegeName:    { type: String, trim: true, default: '' },
+  degree:         { type: String, trim: true, default: '' },
+  branch:         { type: String, trim: true, default: '' },
+  yearOfStudy:    { type: Number, default: null },
+  cgpa:           { type: Number, default: null },
+  graduationYear: { type: Number, default: null },
+  collegeEmail:   { type: String, trim: true, lowercase: true, default: '' },
+  studentContact: {
+    type: String, trim: true, default: '',
+    match: [/^\d{10}$|^$/, 'Contact number must be exactly 10 digits.'],
+  },
   createdAt: { type: Date, default: Date.now },
 }, { timestamps: true });
 
