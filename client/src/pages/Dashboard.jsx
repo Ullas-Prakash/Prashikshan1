@@ -10,6 +10,185 @@ const formatDate = (value) =>
     : '—';
 const label = (value) => String(value || '').replaceAll('-', ' ');
 
+// ─── Interview Card (student dashboard) ──────────────────────────────────────
+function InterviewCard({ app, inv, sc, formatDate, onRespond }) {
+  const [rescheduleOpen, setRescheduleOpen] = useState(false);
+  const [rescheduleForm, setRescheduleForm] = useState({ preferredDate: '', reason: '' });
+  const [busy, setBusy] = useState(false);
+
+  const invStatusLabel = {
+    pending:              '📩 Invitation pending response',
+    confirmed:            '✅ Attendance confirmed',
+    reschedule_requested: '🔄 Reschedule requested',
+    rescheduled:          '📅 Interview rescheduled',
+  };
+
+  const handleConfirm = async () => {
+    setBusy(true);
+    await onRespond('confirm');
+    setBusy(false);
+  };
+
+  const handleReschedule = async (e) => {
+    e.preventDefault();
+    setBusy(true);
+    await onRespond('reschedule', rescheduleForm);
+    setBusy(false);
+    setRescheduleOpen(false);
+  };
+
+  return (
+    <div style={{ padding: 16, borderRadius: 7, border: '1px solid #d9e8d6', background: '#fcfdfa' }}>
+      {/* Header */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', gap: 10, marginBottom: 12 }}>
+        <div>
+          <h3 style={{ margin: 0, fontSize: 14, color: '#1b3828' }}>{app.internship?.title}</h3>
+          <p style={{ margin: '3px 0 0', fontSize: 11, color: '#6b7a6e' }}>
+            {app.internship?.organization}
+          </p>
+        </div>
+        <span style={{ padding: '3px 8px', borderRadius: 12, fontSize: 10, fontWeight: 800,
+                       background: sc.bg, color: sc.color, flexShrink: 0 }}>
+          {invStatusLabel[inv.invitationStatus] || inv.invitationStatus}
+        </span>
+      </div>
+
+      {/* Interview details */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))',
+                    gap: 8, marginBottom: 12 }}>
+        <div style={{ padding: '10px 12px', borderRadius: 6, background: '#f4f8f0',
+                      border: '1px solid #dde5d8' }}>
+          <span style={{ fontSize: 9, fontWeight: 800, color: '#718076', textTransform: 'uppercase' }}>
+            Date &amp; Time
+          </span>
+          <p style={{ margin: '4px 0 0', fontSize: 12, fontWeight: 700, color: '#243c2c' }}>
+            {new Date(inv.scheduledAt).toLocaleString('en-IN', {
+              day: 'numeric', month: 'short', year: 'numeric',
+              hour: '2-digit', minute: '2-digit',
+            })}
+          </p>
+        </div>
+        <div style={{ padding: '10px 12px', borderRadius: 6, background: '#f4f8f0',
+                      border: '1px solid #dde5d8' }}>
+          <span style={{ fontSize: 9, fontWeight: 800, color: '#718076', textTransform: 'uppercase' }}>
+            Mode
+          </span>
+          <p style={{ margin: '4px 0 0', fontSize: 12, fontWeight: 700, color: '#243c2c',
+                      textTransform: 'capitalize' }}>
+            {inv.mode}
+          </p>
+        </div>
+        {inv.mode === 'online' && inv.meetingLink && (
+          <div style={{ padding: '10px 12px', borderRadius: 6, background: '#f4f8f0',
+                        border: '1px solid #dde5d8' }}>
+            <span style={{ fontSize: 9, fontWeight: 800, color: '#718076', textTransform: 'uppercase' }}>
+              Meeting Link
+            </span>
+            <a href={inv.meetingLink} target="_blank" rel="noopener noreferrer"
+               style={{ display: 'block', marginTop: 4, fontSize: 11, color: '#1c563e',
+                        fontWeight: 700, wordBreak: 'break-all' }}>
+              Join Meeting →
+            </a>
+          </div>
+        )}
+        {inv.mode === 'offline' && inv.venue && (
+          <div style={{ padding: '10px 12px', borderRadius: 6, background: '#f4f8f0',
+                        border: '1px solid #dde5d8' }}>
+            <span style={{ fontSize: 9, fontWeight: 800, color: '#718076', textTransform: 'uppercase' }}>
+              Venue
+            </span>
+            <p style={{ margin: '4px 0 0', fontSize: 11, color: '#243c2c', fontWeight: 600 }}>
+              {inv.venue}
+            </p>
+          </div>
+        )}
+      </div>
+
+      {/* Instructions */}
+      {inv.instructions && (
+        <div style={{ padding: '10px 12px', borderRadius: 6, background: '#fff8e8',
+                      border: '1px solid #f0d080', marginBottom: 12 }}>
+          <span style={{ fontSize: 9, fontWeight: 800, color: '#7a5500', textTransform: 'uppercase' }}>
+            Instructions
+          </span>
+          <p style={{ margin: '4px 0 0', fontSize: 11, color: '#5a4000', lineHeight: 1.6 }}>
+            {inv.instructions}
+          </p>
+        </div>
+      )}
+
+      {/* Reschedule request details */}
+      {inv.invitationStatus === 'reschedule_requested' && inv.rescheduleRequest?.reason && (
+        <div style={{ padding: '10px 12px', borderRadius: 6, background: '#fae9e5',
+                      border: '1px solid #f3d0c8', marginBottom: 12 }}>
+          <span style={{ fontSize: 9, fontWeight: 800, color: '#943727', textTransform: 'uppercase' }}>
+            Your reschedule request
+          </span>
+          <p style={{ margin: '4px 0 0', fontSize: 11, color: '#7a2a1e', lineHeight: 1.6 }}>
+            Preferred: {inv.rescheduleRequest.preferredDate
+              ? new Date(inv.rescheduleRequest.preferredDate).toLocaleDateString('en-IN')
+              : '—'} · {inv.rescheduleRequest.reason}
+          </p>
+        </div>
+      )}
+
+      {/* Action buttons — shown for pending or rescheduled status */}
+      {(inv.invitationStatus === 'pending' || inv.invitationStatus === 'rescheduled') && (
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          <button
+            className="button button-small"
+            disabled={busy}
+            onClick={handleConfirm}>
+            ✓ Confirm Attendance
+          </button>
+          <button
+            className="button button-small button-outline"
+            disabled={busy}
+            onClick={() => setRescheduleOpen((v) => !v)}>
+            🔄 Request Reschedule
+          </button>
+        </div>
+      )}
+
+      {/* Reschedule form */}
+      {rescheduleOpen && (
+        <form onSubmit={handleReschedule} style={{ marginTop: 12, display: 'grid', gap: 10 }}>
+          <label style={{ fontSize: 11, fontWeight: 800, color: '#34463a', display: 'flex',
+                          flexDirection: 'column', gap: 5 }}>
+            Preferred date
+            <input
+              type="date"
+              required
+              value={rescheduleForm.preferredDate}
+              onChange={(e) => setRescheduleForm((f) => ({ ...f, preferredDate: e.target.value }))}
+            />
+          </label>
+          <label style={{ fontSize: 11, fontWeight: 800, color: '#34463a', display: 'flex',
+                          flexDirection: 'column', gap: 5 }}>
+            Reason for rescheduling
+            <textarea
+              required
+              rows={2}
+              value={rescheduleForm.reason}
+              onChange={(e) => setRescheduleForm((f) => ({ ...f, reason: e.target.value }))}
+              placeholder="Briefly explain why you need to reschedule…"
+            />
+          </label>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button type="submit" className="button button-small" disabled={busy}>
+              {busy ? 'Sending…' : 'Send Request'}
+            </button>
+            <button type="button" className="button button-small button-outline"
+                    onClick={() => setRescheduleOpen(false)}>
+              Cancel
+            </button>
+          </div>
+        </form>
+      )}
+    </div>
+  );
+}
+
 // ─── Certificate Claim Modal ───────────────────────────────────────────────
 // Shows: estimated hours, time elapsed since enrolment, proof-link input,
 // and a clear warning if the student is about to trigger the anti-cheat penalty.
@@ -227,6 +406,8 @@ export default function Dashboard() {
 
   // Quiz certificates for "My Certificates" section
   const [quizCerts, setQuizCerts] = useState([]);
+  // Interview invitations
+  const [interviews, setInterviews] = useState([]);
 
   const [loading, setLoading]   = useState(true);
   const [error, setError]       = useState('');
@@ -237,7 +418,7 @@ export default function Dashboard() {
     try {
       const [
         courseData, enrollmentData, applicationData, internshipData,
-        analyticsData, revisionData, assessmentCourseData, quizCertData,
+        analyticsData, revisionData, assessmentCourseData, quizCertData, interviewData,
       ] = await Promise.all([
         api('/courses/recommended'),
         api('/courses/me/enrollments'),
@@ -250,6 +431,7 @@ export default function Dashboard() {
         api('/assessments/daily-revision').catch(() => null),
         api('/courses/assessment-recommendations').catch(() => ({ courses: [] })),
         api('/courses/me/quiz-certificates').catch(() => ({ certificates: [] })),
+        api('/internships/applications/my-interviews').catch(() => ({ applications: [] })),
       ]);
 
       setData({
@@ -263,6 +445,7 @@ export default function Dashboard() {
       if (analyticsData) setAnalytics(analyticsData);
       if (revisionData)  setDailyRevision(revisionData);
       setQuizCerts(quizCertData.certificates || []);
+      setInterviews(interviewData.applications || []);
     } catch (e) {
       setError(e.message);
     } finally {
@@ -704,6 +887,52 @@ export default function Dashboard() {
               </div>
             )}
           </section>
+
+          {/* INTERVIEW INVITATIONS */}
+          {interviews.length > 0 && (
+            <section className="panel">
+              <div className="panel-heading">
+                <div>
+                  <p className="eyebrow">Interview schedule</p>
+                  <h2>Interview Invitations</h2>
+                </div>
+              </div>
+              <div style={{ display: 'grid', gap: 16 }}>
+                {interviews.map((app) => {
+                  const inv = app.interview;
+                  const statusColors = {
+                    pending:              { bg: '#fff0cd', color: '#946914' },
+                    confirmed:            { bg: '#e1f1df', color: '#287048' },
+                    reschedule_requested: { bg: '#fae9e5', color: '#943727' },
+                    rescheduled:          { bg: '#dceaf8', color: '#295b91' },
+                  };
+                  const sc = statusColors[inv.invitationStatus] || statusColors.pending;
+                  return (
+                    <InterviewCard
+                      key={app._id}
+                      app={app}
+                      inv={inv}
+                      sc={sc}
+                      formatDate={formatDate}
+                      onRespond={async (action, extra) => {
+                        try {
+                          const { application: updated } = await api(
+                            `/internships/applications/${app._id}/interview-response`,
+                            { method: 'PATCH', body: { action, ...extra } }
+                          );
+                          setInterviews((prev) => prev.map((a) =>
+                            String(a._id) === String(updated._id)
+                              ? { ...a, interview: updated.interview }
+                              : a
+                          ));
+                        } catch (e) { setError(e.message); }
+                      }}
+                    />
+                  );
+                })}
+              </div>
+            </section>
+          )}
         </div>
 
         {/* SIDEBAR */}

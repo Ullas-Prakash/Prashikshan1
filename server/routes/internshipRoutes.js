@@ -318,4 +318,123 @@ router.patch('/applications/:id', requireAuth, allowRoles('partner', 'coordinato
   } catch (error) { next(error); }
 });
 
+// ── Interview invitation routes ───────────────────────────────────────────────
+
+// POST /internships/applications/:id/schedule-interview
+// Partner schedules an interview for an ACCEPTED application only.
+router.post('/applications/:id/schedule-interview', requireAuth, allowRoles('partner'), async (req, res, next) => {
+  try {
+    const application = await Application.findById(req.params.id).populate('internship');
+    if (!application) return res.status(404).json({ error: 'Application not found.' });
+
+    // Security: partner must own the internship
+    if (String(application.internship.postedBy) !== req.auth.sub)
+      return res.status(403).json({ error: 'You can only schedule interviews for your own internships.' });
+
+    // Status gate: only accepted applications
+    if (application.status !== 'accepted')
+      return res.status(400).json({ error: 'Interview invitations can only be sent for accepted applications.' });
+
+    const { scheduledAt, mode, meetingLink = '', venue = '', instructions = '' } = req.body;
+
+    if (!scheduledAt || isNaN(new Date(scheduledAt).getTime()))
+      return res.status(400).json({ error: 'A valid interview date and time is required.' });
+    if (new Date(scheduledAt) <= new Date())
+      return res.status(400).json({ error: 'Interview date must be in the future.' });
+    if (!['online', 'offline'].includes(mode))
+      return res.status(400).json({ error: 'Interview mode must be "online" or "offline".' });
+    if (mode === 'online' && !meetingLink.trim())
+      return res.status(400).json({ error: 'A meeting link is required for online interviews.' });
+    if (mode === 'offline' && !venue.trim())
+      return res.status(400).json({ error: 'A venue/address is required for offline interviews.' });
+
+    const now = new Date();
+    const isUpdate = !!application.interview;
+
+    application.interview = {
+      scheduledAt: new Date(scheduledAt),
+      mode,
+      meetingLink: meetingLink.trim(),
+      venue: venue.trim(),
+      instructions: instructions.trim(),
+      invitationStatus: isUpdate ? 'rescheduled' : 'pending',
+      rescheduleRequest: { preferredDate: null, reason: '', requestedAt: null },
+      sentAt: isUpdate ? application.interview.sentAt : now,
+      updatedAt: now,
+    };
+
+    application.timeline.push({
+      status: application.status,
+      note: isUpdate
+        ? `Interview rescheduled to ${new Date(scheduledAt).toLocaleString('en-IN')}`
+        : `Interview scheduled for ${new Date(scheduledAt).toLocaleString('en-IN')}`,
+      actor: req.auth.sub,
+    });
+
+    await application.save();
+    return res.json({ application, message: isUpdate ? 'Interview updated and student notified.' : 'Interview invitation sent to the student.' });
+  } catch (error) { next(error); }
+});
+
+// PATCH /internships/applications/:id/interview-response
+// Student responds to their own interview invitation: confirm or request reschedule.
+router.patch('/applications/:id/interview-response', requireAuth, allowRoles('student'), async (req, res, next) => {
+  try {
+    const application = await Application.findOne({ _id: req.params.id, student: req.auth.sub })
+      .populate('internship');
+    if (!application) return res.status(404).json({ error: 'Application not found.' });
+    if (!application.interview) return res.status(400).json({ error: 'No interview invitation found for this application.' });
+
+    const { action, preferredDate, reason = '' } = req.body;
+
+    if (action === 'confirm') {
+      application.interview.invitationStatus = 'confirmed';
+      application.interview.updatedAt = new Date();
+      application.timeline.push({
+        status: application.status,
+        note: 'Student confirmed interview attendance.',
+        actor: req.auth.sub,
+      });
+      await application.save();
+      return res.json({ application, message: 'Attendance confirmed. The company has been notified.' });
+    }
+
+    if (action === 'reschedule') {
+      if (!preferredDate || isNaN(new Date(preferredDate).getTime()))
+        return res.status(400).json({ error: 'Please provide a preferred date for rescheduling.' });
+      if (!reason.trim())
+        return res.status(400).json({ error: 'Please provide a reason for requesting rescheduling.' });
+
+      application.interview.invitationStatus = 'reschedule_requested';
+      application.interview.rescheduleRequest = {
+        preferredDate: new Date(preferredDate),
+        reason: reason.trim(),
+        requestedAt: new Date(),
+      };
+      application.interview.updatedAt = new Date();
+      application.timeline.push({
+        status: application.status,
+        note: `Student requested reschedule. Preferred: ${new Date(preferredDate).toLocaleString('en-IN')}. Reason: ${reason.trim()}`,
+        actor: req.auth.sub,
+      });
+      await application.save();
+      return res.json({ application, message: 'Reschedule request sent to the company.' });
+    }
+
+    return res.status(400).json({ error: 'Action must be "confirm" or "reschedule".' });
+  } catch (error) { next(error); }
+});
+
+// GET /internships/applications/my-interviews
+// Student fetches all their applications that have interview invitations.
+router.get('/applications/my-interviews', requireAuth, allowRoles('student'), async (req, res, next) => {
+  try {
+    const applications = await Application.find({
+      student: req.auth.sub,
+      interview: { $ne: null },
+    }).populate('internship', 'title organization').sort({ updatedAt: -1 });
+    return res.json({ applications });
+  } catch (error) { next(error); }
+});
+
 module.exports = router;

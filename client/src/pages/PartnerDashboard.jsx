@@ -151,13 +151,117 @@ function DevPublishButton({ internshipId, onPublished }) {
   );
 }
 
-const workflowStatuses = ['shortlisted', 'interview', 'offered', 'accepted', 'rejected', 'in-progress', 'completed'];
+const workflowStatuses = ['shortlisted', 'interview', 'offered', 'accepted', 'rejected', 'in-progress', 'completed', 'selected'];
 
 const STATUS_LABELS = {
   applied: 'Applied', shortlisted: 'Under Review', interview: 'Under Review',
   offered: 'Selected', accepted: 'Selected', rejected: 'Rejected',
-  'in-progress': 'Selected', completed: 'Completed',
+  'in-progress': 'Selected', completed: 'Completed', selected: 'Selected',
 };
+
+// ─── Schedule Interview Modal ──────────────────────────────────────────────
+function ScheduleInterviewModal({ application, onClose, onSent }) {
+  const isUpdate = !!application.interview;
+  const [form, setForm] = useState({
+    scheduledAt: '',
+    mode: 'online',
+    meetingLink: '',
+    venue: '',
+    instructions: '',
+  });
+  const [busy, setBusy]   = useState(false);
+  const [error, setError] = useState('');
+  const upd = (k, v) => setForm((f) => ({ ...f, [k]: v }));
+
+  const submit = async (e) => {
+    e.preventDefault();
+    setError(''); setBusy(true);
+    try {
+      const { application: updated, message } = await api(
+        `/internships/applications/${application._id}/schedule-interview`,
+        { method: 'POST', body: form }
+      );
+      onSent(updated, message);
+    } catch (err) { setError(err.message); }
+    finally { setBusy(false); }
+  };
+
+  return (
+    <div className="modal-backdrop" role="dialog" aria-modal="true" onClick={onClose}>
+      <section className="modal" style={{ width: 'min(100%,540px)', maxHeight:'90vh', overflowY:'auto' }}
+               onClick={(e) => e.stopPropagation()}>
+        <button className="modal-close" onClick={onClose} aria-label="Close">×</button>
+        <p className="eyebrow">{isUpdate ? 'Update Interview' : 'Schedule Interview'}</p>
+        <h2 style={{ margin: '4px 0 6px', fontSize: 22 }}>
+          {application.student?.name || 'Applicant'}
+        </h2>
+        <p className="muted" style={{ marginBottom: 16, fontSize: 12 }}>
+          {application.internship?.title}
+        </p>
+
+        {error && <p className="form-alert">{error}</p>}
+
+        <form className="stack-form" onSubmit={submit}>
+          <div className="field-grid">
+            <label>Interview date &amp; time
+              <input
+                type="datetime-local"
+                required
+                value={form.scheduledAt}
+                onChange={(e) => upd('scheduledAt', e.target.value)}
+              />
+            </label>
+            <label>Mode
+              <select value={form.mode} onChange={(e) => upd('mode', e.target.value)}>
+                <option value="online">Online</option>
+                <option value="offline">Offline / In-person</option>
+              </select>
+            </label>
+          </div>
+
+          {form.mode === 'online' ? (
+            <label>Meeting link
+              <input
+                type="url"
+                required
+                value={form.meetingLink}
+                onChange={(e) => upd('meetingLink', e.target.value)}
+                placeholder="https://meet.google.com/…"
+              />
+            </label>
+          ) : (
+            <label>Venue / address
+              <input
+                required
+                value={form.venue}
+                onChange={(e) => upd('venue', e.target.value)}
+                placeholder="Building, street, city"
+              />
+            </label>
+          )}
+
+          <label>
+            Additional instructions <span className="optional">optional</span>
+            <textarea
+              value={form.instructions}
+              onChange={(e) => upd('instructions', e.target.value)}
+              placeholder="Bring ID, join 5 minutes early, topics to prepare…"
+            />
+          </label>
+
+          <div style={{ display: 'flex', gap: 10 }}>
+            <button className="button button-full" disabled={busy}>
+              {busy ? 'Sending…' : isUpdate ? 'Update & Notify Student' : 'Send Interview Invitation'}
+            </button>
+            <button type="button" className="button button-outline" onClick={onClose}>
+              Cancel
+            </button>
+          </div>
+        </form>
+      </section>
+    </div>
+  );
+}
 
 // ─── Applicant Details Modal ───────────────────────────────────────────────
 function ApplicantModal({ application, onClose, onStatusChange }) {
@@ -314,6 +418,8 @@ export default function PartnerDashboard() {
 
   // Applicant details modal
   const [viewApp, setViewApp] = useState(null);
+  // Schedule interview modal
+  const [interviewApp, setInterviewApp] = useState(null);
 
   const load = async () => {
     try {
@@ -604,6 +710,15 @@ export default function PartnerDashboard() {
                     onClick={() => setViewApp(app)}>
                     View Applicant
                   </button>
+                  {/* Schedule Interview — only for accepted applications */}
+                  {app.status === 'accepted' && (
+                    <button
+                      className="button button-small"
+                      onClick={() => setInterviewApp(app)}
+                      style={{ background: '#1c563e', borderColor: '#1c563e' }}>
+                      {app.interview ? '📅 Update Interview' : '📅 Schedule Interview'}
+                    </button>
+                  )}
                   <select
                     value={app.status}
                     onChange={(e) => move(app, e.target.value)}>
@@ -618,12 +733,94 @@ export default function PartnerDashboard() {
         )}
       </section>
 
+      {/* ── How to Improve Your Company Rating ─────────────────────────────── */}
+      <section className="panel" style={{ marginTop: 18 }}>
+        <div className="panel-heading" style={{ marginBottom: 4 }}>
+          <div>
+            <p className="eyebrow">Performance guidance</p>
+            <h2>How to Improve Your Company Rating</h2>
+          </div>
+        </div>
+        <p style={{ fontSize: 13, color: '#637166', lineHeight: 1.75, marginBottom: 20 }}>
+          Your company is rated on two dimensions: how well you mentor students and how many
+          opportunities you create. Here is exactly what moves the needle on each.
+        </p>
+
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 16, marginBottom: 20 }}>
+
+          {/* ── Improve Mentorship ── */}
+          <div style={{ padding: '20px', borderRadius: 8, border: '1px solid #c8dfc4', background: '#f4faf1' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
+              <span style={{ fontSize: 24 }}>🤝</span>
+              <strong style={{ fontSize: 14, color: '#1e3829' }}>Improve Mentorship</strong>
+            </div>
+            <div style={{ display: 'grid', gap: 10 }}>
+              {[
+                { icon: '🎓', text: 'Successfully complete student internships — each completed internship adds 5 points to your mentorship score.' },
+                { icon: '💬', text: 'Provide hands-on guidance, regular check-ins, and constructive feedback throughout the internship.' },
+                { icon: '✅', text: 'Maintain your verified partner status — verification contributes a fixed 10 points.' },
+                { icon: '📊', text: 'Your mentorship score starts at a base of 75 and can reach a maximum of 100.' },
+              ].map((item, i) => (
+                <div key={i} style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+                  <span style={{ fontSize: 16, flexShrink: 0, marginTop: 1 }}>{item.icon}</span>
+                  <p style={{ margin: 0, fontSize: 12, color: '#3a5443', lineHeight: 1.65 }}>{item.text}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* ── Increase Internship Opportunities ── */}
+          <div style={{ padding: '20px', borderRadius: 8, border: '1px solid #b8d4e8', background: '#f4f8fc' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
+              <span style={{ fontSize: 24 }}>🚀</span>
+              <strong style={{ fontSize: 14, color: '#1e3038' }}>Increase Internship Opportunities</strong>
+            </div>
+            <div style={{ display: 'grid', gap: 10 }}>
+              {[
+                { icon: '📋', text: 'Post more active internship listings — each published listing adds 25 points to your opportunity score.' },
+                { icon: '🏅', text: 'Offer more NEP academic credits per internship — each credit contributes 10 points.' },
+                { icon: '🤝', text: 'Accept suitable applicants — each hired student adds 5 points.' },
+                { icon: '📊', text: 'Your opportunity score has a maximum of 100. A single high-credit internship with strong hiring can reach this cap quickly.' },
+              ].map((item, i) => (
+                <div key={i} style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+                  <span style={{ fontSize: 16, flexShrink: 0, marginTop: 1 }}>{item.icon}</span>
+                  <p style={{ margin: 0, fontSize: 12, color: '#2a3d50', lineHeight: 1.65 }}>{item.text}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <div style={{ padding: '14px 18px', borderRadius: 7, background: '#edf7ea', border: '1px solid #c8dfc4' }}>
+          <p style={{ margin: 0, fontSize: 12, color: '#2d5240', lineHeight: 1.75 }}>
+            Your company's performance is updated dynamically based on internship activity, credits
+            offered and successful completions. Keep creating opportunities and supporting students
+            to improve your company's position.
+          </p>
+        </div>
+      </section>
+
       {/* Applicant details modal */}
       {viewApp && (
         <ApplicantModal
           application={viewApp}
           onClose={() => setViewApp(null)}
           onStatusChange={handleStatusChange}
+        />
+      )}
+
+      {/* Schedule interview modal */}
+      {interviewApp && (
+        <ScheduleInterviewModal
+          application={interviewApp}
+          onClose={() => setInterviewApp(null)}
+          onSent={(updated, message) => {
+            setApplications((cur) => cur.map((a) =>
+              String(a._id) === String(updated._id) ? { ...a, interview: updated.interview } : a
+            ));
+            setInterviewApp(null);
+            setNotice(message);
+          }}
         />
       )}
     </div>
