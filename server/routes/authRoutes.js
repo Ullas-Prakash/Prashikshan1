@@ -88,7 +88,6 @@ router.post('/register', async (req, res, next) => {
     // ── Student-specific validation ──
     if (role === 'student') {
       if (!collegeName?.trim())   return res.status(400).json({ error: 'College / University name is required.' });
-      if (!degree?.trim())        return res.status(400).json({ error: 'Degree / Course is required.' });
       if (!branch?.trim())        return res.status(400).json({ error: 'Branch / Department is required.' });
       if (!yearOfStudy || ![1, 2, 3, 4, 5].includes(Number(yearOfStudy)))
         return res.status(400).json({ error: 'Current year of study must be between 1 and 5.' });
@@ -121,7 +120,6 @@ router.post('/register', async (req, res, next) => {
     // Store academic + contact fields only for students
     if (role === 'student') {
       createData.collegeName    = collegeName.trim();
-      createData.degree         = degree.trim();
       createData.branch         = branch.trim();
       createData.yearOfStudy    = Number(yearOfStudy);
       createData.cgpa           = Number(cgpa);

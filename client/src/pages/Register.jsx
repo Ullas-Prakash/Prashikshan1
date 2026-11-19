@@ -6,7 +6,6 @@ import { useAuth } from '../context/AuthContext';
 // Exactly 10 decimal digits — matches the backend indianMobilePattern.
 const PHONE_RE = /^\d{10}$/;
 
-const DEGREES = ['B.E.', 'B.Tech', 'BCA', 'BCS', 'B.Sc (CS)', 'B.Sc (IT)', 'BBA', 'B.Com', 'MCA', 'M.Tech', 'M.E.', 'MBA', 'Other'];
 const BRANCHES = ['CSE', 'ISE', 'ECE', 'EEE', 'ME', 'Civil', 'Chemical', 'IT', 'AIDS', 'AIML', 'Data Science', 'Cyber Security', 'Other'];
 const YEARS = [1, 2, 3, 4, 5];
 const currentYear = new Date().getFullYear();
@@ -16,7 +15,7 @@ const INITIAL_FORM = {
   name: '', email: '', password: '', confirmPassword: '',
   role: 'student', organization: '', department: '',
   // Student academic fields
-  collegeName: '', degree: '', branch: '', yearOfStudy: '', cgpa: '', graduationYear: '', collegeEmail: '', studentContact: '',
+  collegeName: '', branch: '', yearOfStudy: '', cgpa: '', graduationYear: '', collegeEmail: '', studentContact: '',
 };
 
 export default function Register() {
@@ -197,17 +196,6 @@ export default function Register() {
               </label>
 
               <div className="field-grid">
-                <label>
-                  Degree / Course
-                  <select
-                    required
-                    value={form.degree}
-                    onChange={(e) => update('degree', e.target.value)}
-                  >
-                    <option value="">Select degree</option>
-                    {DEGREES.map((d) => <option key={d} value={d}>{d}</option>)}
-                  </select>
-                </label>
                 <label>
                   Branch / Department
                   <select
