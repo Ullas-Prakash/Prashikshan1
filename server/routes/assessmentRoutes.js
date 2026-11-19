@@ -32,12 +32,82 @@ function getTodayString() {
   return new Date().toISOString().slice(0, 10);
 }
 
+// Aliases that the resume parser produces which don't literally match ALL_SKILLS tokens.
+// Keys are lowercase; values are the canonical ALL_SKILLS token.
+const SKILL_ALIASES = {
+  'node.js':      'nodejs',
+  'node js':      'nodejs',
+  'node':         'nodejs',
+  'react.js':     'react',
+  'reactjs':      'react',
+  'react native': 'react',
+  'javascript':   'javascript',
+  'js':           'javascript',
+  'typescript':   'javascript',   // no ts slot — nearest match
+  'html5':        'html',
+  'css3':         'css',
+  'mongo':        'mongodb',
+  'mongo db':     'mongodb',
+  'mysql':        'sql',
+  'postgresql':   'sql',
+  'postgres':     'sql',
+  'pl/sql':       'sql',
+  'data structures': 'dsa',
+  'data structures and algorithms': 'dsa',
+  'data structures & algorithms': 'dsa',
+  'aws':          'cloud',
+  'azure':        'cloud',
+  'gcp':          'cloud',
+  'cloud computing': 'cloud',
+  'operating systems': 'os',
+  'operating system': 'os',
+  'database management': 'dbms',
+  'database management system': 'dbms',
+  'dbms':         'dbms',
+  'git/github':   'git',
+  'github':       'git',
+};
+
+const ALL_ASSESSMENT_SKILLS = new Set([
+  'html','css','javascript','react','nodejs','python','mongodb',
+  'sql','git','dsa','java','cloud','os','dbms',
+]);
+
+/**
+ * Maps a raw skill string from the resume parser to the canonical ALL_SKILLS
+ * token used by the assessment system, or returns null if no match exists.
+ */
+function mapToAssessmentSkill(raw) {
+  const lower = String(raw || '').trim().toLowerCase();
+  if (!lower) return null;
+  // Direct match (after lowercasing)
+  if (ALL_ASSESSMENT_SKILLS.has(lower)) return lower;
+  // Alias match
+  if (SKILL_ALIASES[lower]) return SKILL_ALIASES[lower];
+  // Partial / substring match for multi-word entries, whole-word only
+  // e.g. "Core Java" -> "java", "Advanced Python" -> "python"
+  // Uses word-boundary check to avoid "Photoshop" matching "os"
+  for (const token of ALL_ASSESSMENT_SKILLS) {
+    const re = new RegExp('(?<![a-z])' + token + '(?![a-z])', 'i');
+    if (re.test(lower)) return token;
+  }
+  return null;
+}
+
 // POST /api/assessments/parse-resume
 router.post('/parse-resume', requireAuth, allowRoles('student'), upload.single('resume'), async (req, res, next) => {
   try {
     if (!req.file) return res.status(400).json({ error: 'Please upload a PDF or DOCX resume file.' });
-    const { skills } = await parseResume(req.file.buffer, req.file.mimetype);
-    return res.json({ skills });
+    const parsed = await parseResume(req.file.buffer, req.file.mimetype);
+    // Collect every skill string the parser found — from both flat skills and
+    // all items inside skill categories (e.g. "Programming: Java, Python").
+    const rawSkills = [
+      ...(parsed.skills || []),
+      ...(parsed.skillCategories || []).flatMap((c) => c.items || []),
+    ];
+    // Map each raw skill to its canonical ALL_SKILLS token, then de-duplicate.
+    const mapped = [...new Set(rawSkills.map(mapToAssessmentSkill).filter(Boolean))];
+    return res.json({ skills: mapped });
   } catch (error) {
     next(error);
   }
