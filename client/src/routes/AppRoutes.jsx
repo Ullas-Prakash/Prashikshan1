@@ -15,6 +15,7 @@ import PartnerProfileSetup from '../pages/PartnerProfileSetup';
 import NotFound from '../pages/NotFound';
 import VerifyCertificate from '../pages/VerifyCertificate';
 import IndustryAwareness from '../pages/IndustryAwareness';
+import ResumeBuilder from '../pages/ResumeBuilder';
 
 export default function AppRoutes() {
   return <Routes>
@@ -29,6 +30,7 @@ export default function AppRoutes() {
     <Route path="/dashboard" element={<ProtectedRoute roles={['student']}><Dashboard /></ProtectedRoute>} />
     <Route path="/assessment" element={<ProtectedRoute roles={['student']}><Assessment /></ProtectedRoute>} />
     <Route path="/industry-awareness" element={<ProtectedRoute roles={['student']}><IndustryAwareness /></ProtectedRoute>} />
+    <Route path="/resume" element={<ProtectedRoute roles={['student']}><ResumeBuilder /></ProtectedRoute>} />
     <Route path="/skill-assessment" element={<Navigate to="/assessment" replace />} />
     <Route path="/partner" element={<ProtectedRoute roles={['partner']}><PartnerDashboard /></ProtectedRoute>} />
     <Route path="/coordination" element={<ProtectedRoute roles={['coordinator']}><CoordinatorDashboard /></ProtectedRoute>} />

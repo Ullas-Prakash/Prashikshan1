@@ -12,6 +12,7 @@ const courseQuizRoutes   = require('./routes/courseQuizRoutes');
 const internshipRoutes  = require('./routes/internshipRoutes');
 const coordinatorRoutes = require('./routes/coordinatorRoutes');
 const certificateRoutes = require('./routes/certificateRoutes');
+const resumeRoutes      = require('./routes/resumeRoutes');
 
 const app = express();
 const port = Number(process.env.PORT || 5000);
@@ -46,6 +47,7 @@ app.use('/api/courses', courseQuizRoutes); // quiz routes share the /api/courses
 app.use('/api/internships', internshipRoutes);
 app.use('/api/coordination', coordinatorRoutes);
 app.use('/api/certificates', certificateRoutes);
+app.use('/api/resume', resumeRoutes);
 
 const clientBuild = path.resolve(__dirname, '../client/dist');
 app.use(express.static(clientBuild, { index: false, maxAge: process.env.NODE_ENV === 'production' ? '1h' : 0 }));

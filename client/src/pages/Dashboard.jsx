@@ -408,6 +408,8 @@ export default function Dashboard() {
   const [quizCerts, setQuizCerts] = useState([]);
   // Interview invitations
   const [interviews, setInterviews] = useState([]);
+  // Resume status
+  const [resumeData, setResumeData] = useState(null);
 
   const [loading, setLoading]   = useState(true);
   const [error, setError]       = useState('');
@@ -418,7 +420,7 @@ export default function Dashboard() {
     try {
       const [
         courseData, enrollmentData, applicationData, internshipData,
-        analyticsData, revisionData, assessmentCourseData, quizCertData, interviewData,
+        analyticsData, revisionData, assessmentCourseData, quizCertData, interviewData, resumeResult,
       ] = await Promise.all([
         api('/courses/recommended'),
         api('/courses/me/enrollments'),
@@ -432,6 +434,7 @@ export default function Dashboard() {
         api('/courses/assessment-recommendations').catch(() => ({ courses: [] })),
         api('/courses/me/quiz-certificates').catch(() => ({ certificates: [] })),
         api('/internships/applications/my-interviews').catch(() => ({ applications: [] })),
+        api('/resume/me').catch(() => null),
       ]);
 
       setData({
@@ -446,6 +449,7 @@ export default function Dashboard() {
       if (revisionData)  setDailyRevision(revisionData);
       setQuizCerts(quizCertData.certificates || []);
       setInterviews(interviewData.applications || []);
+      setResumeData(resumeResult?.resume || null);
     } catch (e) {
       setError(e.message);
     } finally {
@@ -1002,10 +1006,67 @@ export default function Dashboard() {
             </section>
           )}
 
+          {/* MY RESUME — link to Resume Builder */}
+          <section className="panel">
+            <p className="eyebrow">My resume</p>
+            <h2>{resumeData ? 'Resume on file' : 'No resume yet'}</h2>
+            {resumeData ? (
+              <div style={{ marginTop: 10, display: 'grid', gap: 8 }}>
+                {resumeData.personal?.name && (
+                  <p style={{ margin: 0, fontSize: 12, fontWeight: 700, color: '#243c2c' }}>
+                    {resumeData.personal.name}
+                  </p>
+                )}
+                {resumeData.skills?.length > 0 && (
+                  <p style={{ margin: 0, fontSize: 10, color: '#6b7a6e' }}>
+                    {resumeData.skills.slice(0, 5).join(' · ')}
+                    {resumeData.skills.length > 5 ? ` +${resumeData.skills.length - 5} more` : ''}
+                  </p>
+                )}
+                <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
+                  <Link className="button button-small button-outline" to="/resume"
+                        style={{ textDecoration: 'none', flex: 1, justifyContent: 'center' }}>
+                    ✏ Edit Resume
+                  </Link>
+                  <a
+                    href="/api/resume/me/pdf"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="button button-small"
+                    style={{ flex: 1, justifyContent: 'center', textDecoration: 'none' }}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      const session = JSON.parse(localStorage.getItem('prashikshan_session') || 'null');
+                      fetch('/api/resume/me/pdf', {
+                        headers: session?.token ? { Authorization: `Bearer ${session.token}` } : {},
+                      }).then((r) => r.blob()).then((blob) => {
+                        const url = URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url; a.download = 'Resume.pdf';
+                        a.click(); URL.revokeObjectURL(url);
+                      }).catch(() => {});
+                    }}
+                  >
+                    ↓ Download PDF
+                  </a>
+                </div>
+              </div>
+            ) : (
+              <div style={{ marginTop: 10 }}>
+                <p className="empty-inline" style={{ marginBottom: 10 }}>
+                  Upload or build your resume to track it here.
+                </p>
+                <Link className="button button-outline button-full" to="/resume"
+                      style={{ textDecoration: 'none' }}>
+                  Create My Resume
+                </Link>
+              </div>
+            )}
+          </section>
+
           <section className="panel">
             <p className="eyebrow">My skill profile</p>
-            <h2>Where you are today</h2>
-            {user.skillProfile?.length ? (
+            <h2>Where you are today</h2>            {user.skillProfile?.length ? (
               <div className="skill-stack">
                 {user.skillProfile.map((skill) => (
                   <div key={skill.skill}>

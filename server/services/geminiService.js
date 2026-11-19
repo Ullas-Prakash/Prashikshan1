@@ -1,5 +1,5 @@
-// Updated to gemini-2.0-flash-exp per Google's deprecation notice for gemini-2.0-flash
-const GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent";
+// Using gemini-3.8-flash (current stable model for this API key)
+const GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent";
 
 async function sleep(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
